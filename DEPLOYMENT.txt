@@ -1,0 +1,32 @@
+RESUMEN RÁPIDO PARA DESPLEGAR MC RED HUB
+========================================
+
+1) Usa Node.js 20 o superior.
+2) Ejecuta npm install dentro de web-source.
+3) Copia .env.example como .env y configura BASE_URL, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, SESSION_SECRET, STORAGE_ROOT y COOKIE_SECURE. BASE_URL debe ser el dominio HTTPS exacto, sin una barra final.
+4) Instala ClamAV y asegúrate de que el comando configurado en CLAMSCAN_BIN pueda ejecutarse. Mantén sus firmas actualizadas.
+5) Ejecuta npm start.
+6) Publica el servidor Node.js con HTTPS. No uses solo hosting estático: la API y Socket.IO deben estar activos. El Dockerfile incluido instala ClamAV y actualiza sus firmas periódicamente.
+7) Monta un volumen persistente y define STORAGE_ROOT a su ruta. Debe conservar data/ y uploads/ entre reinicios y redepliegues.
+
+SEGURIDAD DE SUBIDAS
+--------------------
+Las publicaciones de mods no requieren registro, por lo que el servidor aplica un límite inicial por IP y analiza los archivos subidos mediante ClamAV. AV_SCAN_REQUIRED=true es obligatorio por defecto: sin ClamAV disponible, las subidas se rechazan. Los enlaces externos HTTPS no se descargan ni se analizan. No desactives la exigencia del antivirus en un servicio público.
+
+PERSISTENCIA
+------------
+STORAGE_ROOT debe señalar un volumen persistente real, por ejemplo /var/data/mc-red-hub si esa es la ruta montada por tu proveedor. En ese directorio se crean data/ (SQLite y sesiones) y uploads/ (mods y skins). El disco local efímero de un servicio gratuito puede borrarse al reiniciar o desplegar; no garantiza conservar los archivos. Programa copias de seguridad.
+
+OAUTH GOOGLE
+------------
+1) En Google Cloud Console crea un proyecto y abre Google Auth Platform.
+2) Configura nombre de la app, correo de soporte y audiencia External si entrarás con cuentas de fuera de tu organización.
+3) Añade el dominio HTTPS y enlaces públicos de inicio y política de privacidad.
+4) Crea un cliente OAuth de tipo Aplicación web. Registra el origen HTTPS exacto y estos dos URI de retorno: https://TU-DOMINIO/auth/google/callback y https://TU-DOMINIO/auth/google/android/callback.
+5) Guarda GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET solo en las variables privadas del servidor. Nunca incluyas el secreto en el APK.
+6) La app solicita únicamente openid, profile y email. No pide acceso a Gmail, Drive u otros datos. En modo Testing gestiona la lista de testers cuando Google la requiera. Para publicar la marca de la app o solicitar ámbitos sensibles/restringidos pueden aplicar revisiones adicionales de Google.
+7) Genera SESSION_SECRET con: node -e "console.log(require('crypto').randomBytes(48).toString('hex'))". Pega el resultado en el servidor, no en el proyecto web público.
+
+ANDROID
+-------
+El login de Google se abre en el navegador externo (Google no admite OAuth dentro de WebView). El navegador vuelve a la app con el deep link mcredhub://auth y el backend canjea un código de un solo uso para establecer la sesión del WebView. Compila el APK después de configurar startUrl en android-project/app/src/main/assets/app-config.json.
