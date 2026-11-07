@@ -1,0 +1,37 @@
+MC RED HUB 4.0 — ENTREGA REVISADA
+
+QUÉ CAMBIA
+- Se eliminó el formulario de Google y la contraseña. El perfil nuevo pide únicamente Nick y foto.
+- El servidor crea una clave privada aleatoria para ese dispositivo; Android la conserva en SharedPreferences privadas y el cliente web también la refleja en localStorage.
+- La app consulta al abrir: /api/health, /api/config, /api/me y vuelve a descargar el catálogo. Al volver al primer plano repite la sincronización.
+- El acceso a las funciones de comunidad, publicación, subida y descarga requiere internet y token de dispositivo. No se guarda un catálogo offline como fuente alternativa.
+- Mods, skins, mundos, servidores, reseñas, actividad y mensajes usan la API de Render y Supabase. Los archivos reales se alojan en el bucket privado de Supabase.
+- El chat se autentica con el mismo token de dispositivo y persiste en la tabla messages.
+- Se mantiene el editor 3D de skins de Bedrock 64x64 integrado en la app (rotación, zoom, capas y edición del atlas).
+- Netlify sirve el panel sin inicio de sesión y reenvía /api/* a Render. El chat Socket.IO usa Render directamente.
+
+DOMINIOS
+- Puerta de sincronización de la app y panel web: https://servidormcredhub.netlify.app
+- API y Socket.IO: https://mc-red-hub-api.onrender.com
+- Netlify no almacena los mods ni es el servidor de datos. Render ejecuta la API; Supabase conserva la base de datos y los archivos.
+
+DESPLIEGUE
+1) Supabase: ejecutar api-render/supabase/schema.sql en SQL Editor. La columna password_hash queda opcional para compatibilidad con perfiles anteriores; MC RED HUB 4.0 ya no la utiliza.
+2) Render: desplegar el contenido de api-render como Web Service Node. Build: npm install. Start: npm start. Configurar SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY y opcionalmente SUPABASE_BUCKET=mcrh-files y MAX_FILE_MB=50. Nunca colocar SUPABASE_SERVICE_ROLE_KEY en Android o Netlify.
+3) Netlify: publicar la carpeta netlify-site con netlify.toml y _redirects. Mantener el dominio servidormcredhub.netlify.app asignado al sitio.
+4) Android: abrir android-project en Android Studio/entorno Gradle, sincronizar Gradle y compilar app > assembleDebug. El applicationId se mantiene com.mcredhub.app y versionCode se sube a 4.
+
+AVISO IMPORTANTE SOBRE LOS PERFILES SIN CONTRASEÑA
+No hay recuperación de cuenta por Nick y foto porque ambos son públicos y cualquiera podría hacerse pasar por otra persona. La clave de acceso queda ligada a la instalación de la app. Si se borran los datos/reinstala o se cambia de teléfono, los archivos y publicaciones siguen sincronizados para todos, pero el perfil individual anterior no se puede recuperar desde otro teléfono. No uses el mismo Nick para suplantar otro perfil; el servidor lo marca como ocupado. Para trasladar una identidad entre teléfonos haría falta un código de transferencia secreto opcional, que no se incluyó porque pediste eliminar contraseñas y acceso Google.
+
+ARCHIVOS ACEPTADOS
+- Mods: .mcpack y .mcaddon; también enlaces HTTPS.
+- Mundos: .mcworld y .zip.
+- Skins/fotos: .png, .jpg, .jpeg y .webp según el campo de subida.
+El tamaño de archivo se limita desde el backend (por defecto 50 MB). Esto evita aceptar ejecutables o archivos arbitrarios peligrosos.
+
+COMPROBACIONES REALIZABLES AQUÍ
+Se revisan sintaxis JavaScript, configuración de dominios, contenido del proxy, presencia de editor 3D, ausencia de campos de contraseña/Google en la interfaz y CRC de ZIP. No se puede certificar desde este entorno una subida real a Supabase, que Render/Netlify estén desplegados en tus cuentas ni compilar el APK en tu teléfono. Esas pruebas requieren que los servicios estén desplegados y tus credenciales de Supabase estén configuradas en Render.
+
+EDITOR 3D
+La entrega incluye el editor 3D de skin que ya forma parte de la fuente MC RED HUB: preview del modelo Minecraft, rotación, zoom, capas y edición del skin PNG. No se localizó en la biblioteca un archivo externo independiente del editor 3D al que te refieres; esta versión conserva el editor 3D integrado.
